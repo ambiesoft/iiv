@@ -1,0 +1,24 @@
+<Window x:Class="iiv_view.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="iiv_view"
+        Width="900"
+        Height="700"
+        WindowStartupLocation="CenterScreen"
+        Background="#202020">
+    <Grid ClipToBounds="True">
+        <Image x:Name="ImageView"
+               Stretch="None"
+               RenderOptions.BitmapScalingMode="HighQuality"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               RenderTransformOrigin="0,0">
+            <Image.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="ScaleTransform"/>
+                    <TranslateTransform x:Name="TranslateTransform"/>
+                </TransformGroup>
+            </Image.RenderTransform>
+        </Image>
+    </Grid>
+</Window>
