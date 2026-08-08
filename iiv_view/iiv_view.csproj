@@ -8,5 +8,9 @@
     <Platforms>AnyCPU</Platforms>
     <AssemblyName>iiv_view</AssemblyName>
     <RootNamespace>iiv_view</RootNamespace>
+    <BaseOutputPath></BaseOutputPath>
   </PropertyGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy &quot;$(OutDir)iiv_view.*&quot; &quot;$(SolutionDir)$(Configuration)\&quot;" />
+  </Target>
 </Project>

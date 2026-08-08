@@ -74,7 +74,7 @@ public partial class MainWindow : Window
 
         var mouse = e.GetPosition(this);
 
-        // マウス位置を中心にズームする。
+        // Zoom around the mouse position by adjusting the translation based on the old and new scale.
         var imagePointX = (mouse.X - TranslateTransform.X) / oldScale;
         var imagePointY = (mouse.Y - TranslateTransform.Y) / oldScale;
 

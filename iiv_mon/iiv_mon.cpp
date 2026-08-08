@@ -1,11 +1,17 @@
-#define UNICODE
-#define _UNICODE
+
 #include <windows.h>
 #include <shellapi.h>
 #include <string>
+#include <vector>
+
+#include "../../lsMisc/GetAllClipboardFormats.h"
+#include "../../lsMisc/AnyCloser.h"
+#include "../../lsMisc/DebugMacro.h"
 
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
+
+using namespace Ambiesoft;
 
 constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_CLIPBOARD = WM_APP + 2;
@@ -22,9 +28,9 @@ void ShowTrayMenu()
     GetCursorPos(&pt);
 
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, ID_TRAY_OPEN, L"iiv_view で開く");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_OPEN, L"Open with iiv_view");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"終了");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
 
     SetForegroundWindow(g_hwnd);
     TrackPopupMenu(menu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, g_hwnd, nullptr);
@@ -35,28 +41,57 @@ bool ClipboardHasImage()
 {
     if (!OpenClipboard(g_hwnd))
         return false;
+	ClipboardCloser clipboardCloser;
 
-    bool result = IsClipboardFormatAvailable(CF_BITMAP) ||
-                  IsClipboardFormatAvailable(CF_DIB) ||
-                  IsClipboardFormatAvailable(CF_DIBV5);
+    if (IsClipboardFormatAvailable(CF_BITMAP) ||
+        IsClipboardFormatAvailable(CF_DIB) ||
+        IsClipboardFormatAvailable(CF_DIBV5))
+    {
+		return true;
+    }
 
-    CloseClipboard();
-    return result;
+    if(IsClipboardFormatAvailable(CF_HDROP))
+    {
+        HANDLE hDrop = GetClipboardData(CF_HDROP);
+        if (hDrop)
+        {
+            UINT fileCount = DragQueryFileW((HDROP)hDrop, 0xFFFFFFFF, nullptr, 0);
+            for (UINT i = 0; i < fileCount; ++i)
+            {
+                wchar_t filePath[MAX_PATH]{};
+                DragQueryFileW((HDROP)hDrop, i, filePath, MAX_PATH);
+                DTRACE(filePath);
+                std::wstring ext = filePath;
+                auto pos = ext.find_last_of(L'.');
+                if (pos != std::wstring::npos)
+                    ext = ext.substr(pos + 1);
+                else
+                    ext.clear();
+                if (_wcsicmp(ext.c_str(), L"png") == 0 ||
+                    _wcsicmp(ext.c_str(), L"jpg") == 0 ||
+                    _wcsicmp(ext.c_str(), L"jpeg") == 0 ||
+                    _wcsicmp(ext.c_str(), L"bmp") == 0 ||
+                    _wcsicmp(ext.c_str(), L"gif") == 0)
+                {
+                    return true;
+                }
+            }
+        }
+	}   
+    return false;
 }
 
 void NotifyImageCopied()
 {
     g_nid.uFlags = NIF_INFO;
     wcscpy_s(g_nid.szInfoTitle, L"iiv");
-    wcscpy_s(g_nid.szInfo, L"画像をクリップボードにコピーしました");
+    wcscpy_s(g_nid.szInfo, L"OOOAAA");
     g_nid.dwInfoFlags = NIIF_INFO;
     Shell_NotifyIconW(NIM_MODIFY, &g_nid);
 }
 
 void OpenViewer()
 {
-    // 初期実装では iiv_view.exe を同じフォルダから起動する。
-    // 後で設定ファイルからビューアと起動方式を読み込む。
     wchar_t exePath[MAX_PATH]{};
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
 
