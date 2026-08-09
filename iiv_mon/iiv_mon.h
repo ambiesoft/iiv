@@ -1,0 +1,15 @@
+#include <windows.h>
+#include <shellapi.h>
+#include <string>
+#include <vector>
+
+#include "../../lsMisc/GetAllClipboardFormats.h"
+#include "../../lsMisc/AnyCloser.h"
+#include "../../lsMisc/DebugMacro.h"
+
+struct ClipImageData
+{
+    static DWORD lastTick_;
+    UINT format_ = 0;
+    std::wstring imagePath_;
+};

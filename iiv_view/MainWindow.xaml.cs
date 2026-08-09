@@ -1,3 +1,4 @@
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -15,7 +16,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        Loaded += (_, _) => LoadClipboardImage();
+        Loaded += (_, _) => LoadImage();
+
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseLeftButtonUp += OnMouseLeftButtonUp;
         MouseMove += OnMouseMove;
@@ -23,19 +25,78 @@ public partial class MainWindow : Window
         KeyDown += OnKeyDown;
     }
 
+    private void LoadImage()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+
+        if (args.Length >= 2)
+        {
+            LoadImageFile(args[1]);
+        }
+        else
+        {
+            LoadClipboardImage();
+        }
+    }
+
+    private void LoadImageFile(string fileName)
+    {
+        try
+        {
+            var source = new BitmapImage();
+
+            source.BeginInit();
+            source.UriSource = new Uri(
+                Path.GetFullPath(fileName),
+                UriKind.Absolute);
+            source.CacheOption = BitmapCacheOption.OnLoad;
+            source.EndInit();
+            source.Freeze();
+
+            ImageView.Source = source;
+
+            ResetTransform();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Failed to open image.\n\n{fileName}\n\n{ex.Message}",
+                "iiv_view",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            Close();
+        }
+    }
+
     private void LoadClipboardImage()
     {
         if (!Clipboard.ContainsImage())
+        {
+            Close();
             return;
+        }
 
         var source = Clipboard.GetImage();
+
         if (source == null)
+        {
+            Close();
             return;
+        }
 
         ImageView.Source = source;
+
+        ResetTransform();
+    }
+
+    private void ResetTransform()
+    {
         _scale = 1.0;
+
         ScaleTransform.ScaleX = _scale;
         ScaleTransform.ScaleY = _scale;
+
         TranslateTransform.X = 0;
         TranslateTransform.Y = 0;
     }
@@ -45,6 +106,7 @@ public partial class MainWindow : Window
         _dragStart = e.GetPosition(this);
         _startX = TranslateTransform.X;
         _startY = TranslateTransform.Y;
+
         CaptureMouse();
     }
 
@@ -59,8 +121,12 @@ public partial class MainWindow : Window
             return;
 
         var p = e.GetPosition(this);
-        TranslateTransform.X = _startX + p.X - _dragStart.X;
-        TranslateTransform.Y = _startY + p.Y - _dragStart.Y;
+
+        TranslateTransform.X =
+            _startX + p.X - _dragStart.X;
+
+        TranslateTransform.Y =
+            _startY + p.Y - _dragStart.Y;
     }
 
     private void OnMouseWheel(object sender, MouseWheelEventArgs e)
@@ -69,17 +135,26 @@ public partial class MainWindow : Window
             return;
 
         var oldScale = _scale;
-        _scale *= e.Delta > 0 ? 1.15 : 1.0 / 1.15;
+
+        _scale *= e.Delta > 0
+            ? 1.15
+            : 1.0 / 1.15;
+
         _scale = Math.Clamp(_scale, 0.05, 20.0);
 
         var mouse = e.GetPosition(this);
 
-        // Zoom around the mouse position by adjusting the translation based on the old and new scale.
-        var imagePointX = (mouse.X - TranslateTransform.X) / oldScale;
-        var imagePointY = (mouse.Y - TranslateTransform.Y) / oldScale;
+        var imagePointX =
+            (mouse.X - TranslateTransform.X) / oldScale;
 
-        TranslateTransform.X = mouse.X - imagePointX * _scale;
-        TranslateTransform.Y = mouse.Y - imagePointY * _scale;
+        var imagePointY =
+            (mouse.Y - TranslateTransform.Y) / oldScale;
+
+        TranslateTransform.X =
+            mouse.X - imagePointX * _scale;
+
+        TranslateTransform.Y =
+            mouse.Y - imagePointY * _scale;
 
         ScaleTransform.ScaleX = _scale;
         ScaleTransform.ScaleY = _scale;
@@ -88,13 +163,12 @@ public partial class MainWindow : Window
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
-            Close();
-
-        if (e.Key == Key.D0 || e.Key == Key.NumPad0)
         {
-            _scale = 1.0;
-            ScaleTransform.ScaleX = _scale;
-            ScaleTransform.ScaleY = _scale;
+            Close();
+        }
+        else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
+        {
+            ResetTransform();
         }
     }
 }

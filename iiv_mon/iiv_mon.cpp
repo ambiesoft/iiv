@@ -1,12 +1,4 @@
-
-#include <windows.h>
-#include <shellapi.h>
-#include <string>
-#include <vector>
-
-#include "../../lsMisc/GetAllClipboardFormats.h"
-#include "../../lsMisc/AnyCloser.h"
-#include "../../lsMisc/DebugMacro.h"
+#include "iiv_mon.h"
 
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -21,6 +13,7 @@ constexpr UINT ID_TRAY = 2001;
 
 NOTIFYICONDATAW g_nid{};
 HWND g_hwnd = nullptr;
+DWORD ClipImageData::lastTick_ = 0;
 
 void ShowTrayMenu()
 {
@@ -37,20 +30,31 @@ void ShowTrayMenu()
     DestroyMenu(menu);
 }
 
-bool ClipboardHasImage()
+
+
+bool GetClipboardImage2(ClipImageData* imageData)
 {
     if (!OpenClipboard(g_hwnd))
         return false;
-	ClipboardCloser clipboardCloser;
+    ClipboardCloser clipboardCloser;
 
-    if (IsClipboardFormatAvailable(CF_BITMAP) ||
-        IsClipboardFormatAvailable(CF_DIB) ||
-        IsClipboardFormatAvailable(CF_DIBV5))
+    if (IsClipboardFormatAvailable(CF_BITMAP))
     {
-		return true;
+        imageData->format_ = CF_BITMAP;
+        return true;
+    }
+    if (IsClipboardFormatAvailable(CF_DIB))
+    {
+        imageData->format_ = CF_DIB;
+        return true;
+    }
+    if (IsClipboardFormatAvailable(CF_DIBV5))
+    {
+        imageData->format_ = CF_DIBV5;
+        return true;
     }
 
-    if(IsClipboardFormatAvailable(CF_HDROP))
+    if (IsClipboardFormatAvailable(CF_HDROP))
     {
         HANDLE hDrop = GetClipboardData(CF_HDROP);
         if (hDrop)
@@ -73,13 +77,37 @@ bool ClipboardHasImage()
                     _wcsicmp(ext.c_str(), L"bmp") == 0 ||
                     _wcsicmp(ext.c_str(), L"gif") == 0)
                 {
+                    imageData->format_ = CF_HDROP;
+                    imageData->imagePath_ = filePath;
                     return true;
                 }
             }
         }
-	}   
+    }
     return false;
 }
+bool GetClipboardImage(ClipImageData* imageData)
+{
+    if (!GetClipboardImage2(imageData))
+        return false;
+
+    static ClipImageData lastImageData;
+
+    if(imageData->format_==0)
+		return false;
+    
+    DWORD currentTick = GetTickCount();
+    if (imageData->format_ == lastImageData.format_ &&
+        imageData->imagePath_ == lastImageData.imagePath_ &&
+        (currentTick - lastImageData.lastTick_) < 1000)
+    {
+        return false;
+    }
+    lastImageData = *imageData;
+    lastImageData.lastTick_ = currentTick;
+	return true;
+}
+
 
 void NotifyImageCopied()
 {
@@ -90,7 +118,7 @@ void NotifyImageCopied()
     Shell_NotifyIconW(NIM_MODIFY, &g_nid);
 }
 
-void OpenViewer()
+void OpenViewer(const wchar_t* imagePath = nullptr)
 {
     wchar_t exePath[MAX_PATH]{};
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
@@ -106,8 +134,9 @@ void OpenViewer()
     SHELLEXECUTEINFOW sei{ sizeof(sei) };
     sei.fMask = SEE_MASK_NOASYNC;
     sei.lpFile = path.c_str();
+	sei.lpParameters = imagePath;
     sei.nShow = SW_SHOWNORMAL;
-
+    
     ShellExecuteExW(&sei);
 }
 
@@ -120,12 +149,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_CLIPBOARDUPDATE:
-        if (ClipboardHasImage())
+    {
+		ClipImageData clipImageData;
+        if (GetClipboardImage(&clipImageData))
         {
             NotifyImageCopied();
-            OpenViewer();
+            OpenViewer(clipImageData.imagePath_.c_str());
         }
         return 0;
+    }
+    break;
 
     case WM_TRAY:
         if (lParam == WM_RBUTTONUP)
