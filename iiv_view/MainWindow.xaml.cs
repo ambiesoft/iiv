@@ -55,7 +55,7 @@ public partial class MainWindow : Window
 
             ImageView.Source = source;
 
-            ResetTransform();
+            ResetTransform(source);
         }
         catch (Exception ex)
         {
@@ -87,18 +87,61 @@ public partial class MainWindow : Window
 
         ImageView.Source = source;
 
-        ResetTransform();
+        ResetTransform(source);
     }
 
-    private void ResetTransform()
+    private void ResetTransform(BitmapSource? source = null)
     {
-        _scale = 1.0;
+        if (source == null)
+        {
+            _scale = 1.0;
+
+            ScaleTransform.ScaleX = _scale;
+            ScaleTransform.ScaleY = _scale;
+
+            TranslateTransform.X = 0;
+            TranslateTransform.Y = 0;
+            return;
+        }
+
+        // Get the size of parent container
+        UpdateLayout();
+
+        var parent = ImageView.Parent as FrameworkElement ?? this;
+
+        double availableWidth = parent.ActualWidth;
+        double availableHeight = parent.ActualHeight;
+
+        if (availableWidth <= 0 || availableHeight <= 0)
+        {
+            availableWidth = this.ActualWidth;
+            availableHeight = this.ActualHeight;
+        }
+
+        // Pixel width to WPF logical width
+        double imageLogicalWidth = source.PixelWidth * 96.0 / (source.DpiX > 0 ? source.DpiX : 96.0);
+        double imageLogicalHeight = source.PixelHeight * 96.0 / (source.DpiY > 0 ? source.DpiY : 96.0);
+
+        if (imageLogicalWidth <= 0 || imageLogicalHeight <= 0)
+        {
+            _scale = 1.0;
+        }
+        else
+        {
+            var fitScale = Math.Min(availableWidth / imageLogicalWidth, availableHeight / imageLogicalHeight);
+
+            // Scale down large images to fit, do not scale up small images (maximum 1.0)
+            _scale = Math.Min(1.0, fitScale);
+            if (_scale <= 0)
+                _scale = 1.0;
+        }
 
         ScaleTransform.ScaleX = _scale;
         ScaleTransform.ScaleY = _scale;
 
-        TranslateTransform.X = 0;
-        TranslateTransform.Y = 0;
+        // Place the image as centrally as possible
+        TranslateTransform.X = Math.Round((availableWidth - imageLogicalWidth * _scale) / 2.0);
+        TranslateTransform.Y = Math.Round((availableHeight - imageLogicalHeight * _scale) / 2.0);
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

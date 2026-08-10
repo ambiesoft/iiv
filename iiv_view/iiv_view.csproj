@@ -11,6 +11,6 @@
     <BaseOutputPath></BaseOutputPath>
   </PropertyGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(OutDir)iiv_view.exe&quot; &quot;$(SolutionDir)$(Configuration)\&quot;&#xD;&#xA;copy /Y &quot;$(OutDir)iiv_view.dll&quot; &quot;$(SolutionDir)$(Configuration)\&quot;&#xD;&#xA;" />
+    <Exec Command="copy /Y &quot;$(OutDir)iiv_view.exe&quot; &quot;$(SolutionDir)$(Configuration)\&quot;&#xD;&#xA;copy /Y &quot;$(OutDir)*&quot; &quot;$(SolutionDir)$(Configuration)\&quot;&#xD;&#xA;" />
   </Target>
 </Project>
