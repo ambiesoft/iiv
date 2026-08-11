@@ -9,6 +9,8 @@
 #include "../../lsMisc/AnyCloser.h"
 #include "../../lsMisc/DebugMacro.h"
 #include "../../lsMisc/stdosd/stdosd.h"
+#include "../../lsMisc/SaveClipboardImageToFile.h"
+#include "../../lsMisc/GetUnexistingFile.h"
 
 struct ClipImageData
 {

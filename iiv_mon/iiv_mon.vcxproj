@@ -76,6 +76,8 @@
     <ClCompile Include="..\..\lsMisc\DebugMacro.cpp" />
     <ClCompile Include="..\..\lsMisc\GetAllClipboardFormats.cpp" />
     <ClCompile Include="..\..\lsMisc\GetLastErrorString.cpp" />
+    <ClCompile Include="..\..\lsMisc\GetUnexistingFile.cpp" />
+    <ClCompile Include="..\..\lsMisc\SaveClipboardImageToFile.cpp" />
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd.cpp" />
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd_win.cpp" />
     <ClCompile Include="iiv_mon.cpp" />
@@ -85,6 +87,8 @@
     <ClInclude Include="..\..\lsMisc\DebugMacro.h" />
     <ClInclude Include="..\..\lsMisc\GetAllClipboardFormats.h" />
     <ClInclude Include="..\..\lsMisc\GetLastErrorString.h" />
+    <ClInclude Include="..\..\lsMisc\GetUnexistingFile.h" />
+    <ClInclude Include="..\..\lsMisc\SaveClipboardImageToFile.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd_exception.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd_literal.h" />

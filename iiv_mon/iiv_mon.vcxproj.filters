@@ -17,6 +17,12 @@
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd_win.cpp">
       <Filter>lsMisc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\lsMisc\SaveClipboardImageToFile.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\lsMisc\GetUnexistingFile.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\lsMisc\AnyCloser.h">
@@ -39,6 +45,12 @@
       <Filter>lsMisc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd_literal.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\SaveClipboardImageToFile.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\GetUnexistingFile.h">
       <Filter>lsMisc</Filter>
     </ClInclude>
   </ItemGroup>

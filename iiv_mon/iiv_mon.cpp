@@ -3,6 +3,10 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
+#pragma comment(lib, "advapi32.lib")
+
+#include <wincrypt.h>
+#include <vector>
 
 using namespace Ambiesoft;
 using namespace Ambiesoft::stdosd;
@@ -32,9 +36,140 @@ void ShowTrayMenu()
     DestroyMenu(menu);
 }
 
+std::wstring getTempImagePath()
+{
+	std::wstring tempDir = stdCombinePath(
+        stdGetParentDirectory(stdGetModuleFileName()).c_str(),
+		L"temp");
+    if (!CreateDirectory(tempDir.c_str(), nullptr))
+    {
+        DWORD err = GetLastError();
+        if (err != ERROR_ALREADY_EXISTS)
+        {
+            MessageBox(g_hwnd, stdFormat(L"Failed to create temp directory: %s", tempDir.c_str()).c_str(), L"Error", MB_ICONERROR);
+            return L"";
+		}
+    }
+    std::wstring tempPath = GetUnexistingFile(
+		tempDir.c_str(),
+        L"iiv", L".bmp");
+    return tempPath;
+}
 
+// Compute MD5 of a file using CryptoAPI
+static bool ComputeFileMD5(const std::wstring& filePath, std::wstring& outHex)
+{
+    HANDLE hFile;
+    HCRYPTPROV hProv = 0;
+    HCRYPTHASH hHash = 0;
+    bool success = false;
+    do {
+        outHex.clear();
+        hFile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hFile == INVALID_HANDLE_VALUE)
+            return false;
 
-bool GetClipboardImage2(ClipImageData* imageData)
+        if (!CryptAcquireContextW(&hProv, nullptr, nullptr, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
+            break;
+
+        if (!CryptCreateHash(hProv, CALG_MD5, 0, 0, &hHash))
+            break;
+
+        const DWORD bufSize = 64 * 1024;
+        std::vector<BYTE> buffer(bufSize);
+        DWORD bytesRead = 0;
+        bool bBreak = false;
+        while (ReadFile(hFile, buffer.data(), bufSize, &bytesRead, nullptr) && bytesRead > 0)
+        {
+            if (!CryptHashData(hHash, buffer.data(), bytesRead, 0))
+            {
+                bBreak = true;
+                break;
+            }
+        }
+        if(bBreak)
+			break;
+
+        BYTE rgbHash[16];
+        DWORD cbHash = sizeof(rgbHash);
+        if (!CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0))
+            break;
+
+        static const wchar_t hexDigits[] = L"0123456789abcdef";
+        outHex.reserve(cbHash * 2);
+        for (DWORD i = 0; i < cbHash; ++i)
+        {
+            BYTE b = rgbHash[i];
+            outHex.push_back(hexDigits[b >> 4]);
+            outHex.push_back(hexDigits[b & 0x0F]);
+        }
+
+        success = true;
+	} while (false);
+
+    if (hHash)
+        CryptDestroyHash(hHash);
+    if (hProv)
+        CryptReleaseContext(hProv, 0);
+    CloseHandle(hFile);
+    return success;
+}
+
+bool GetClipboardImage4(ClipImageData* imageData)
+{
+    std::wstring error;
+    std::wstring tempImagePath = getTempImagePath();
+    if(tempImagePath.empty())
+		return false;   
+
+    if (!SaveClipboardImageToFile(tempImagePath.c_str(), &error))
+    {
+        MessageBox(g_hwnd, error.c_str(), L"Error", MB_ICONERROR);
+        return false;
+    }
+
+    const std::wstring ext = stdGetFileExtension(tempImagePath.c_str());
+
+    /*
+    Pseudocode / Plan:
+    1. Open the saved file at 'tempImagePath' for reading.
+    2. Initialize CryptoAPI context with CryptAcquireContext for hashing.
+    3. Create an MD5 hash object with CryptCreateHash.
+    4. Read the file in a loop (e.g. 64KB chunks) and feed each chunk to CryptHashData.
+    5. Finalize and retrieve the raw hash bytes via CryptGetHashParam (HP_HASHVAL).
+    6. Convert the raw bytes to a lowercase hexadecimal wide string.
+    7. Store the resulting MD5 hex string into 'imageData->md5_' (if available).
+    8. Clean up CryptoAPI objects and close the file handle.
+    9. If any step fails, perform cleanup and report failure.
+    */
+    // Calculate MD5 and store it (if computation succeeds)
+    std::wstring md5;
+    if (!ComputeFileMD5(tempImagePath, md5))
+    {
+        MessageBox(g_hwnd, L"Failed to get md5", L"Error", MB_ICONERROR);
+        return false;
+    }
+
+    long fileSize = stdGetFileSize(tempImagePath.c_str());
+
+    std::wstring newFilename = stdFormat(L"%d-%s%s",
+        fileSize,
+        md5.c_str(),
+        ext.c_str());
+
+	// Rename the file to include size and MD5
+	std::wstring newFilePath = stdCombinePath(
+        stdGetParentDirectory(tempImagePath), newFilename);
+    if (!MoveFile(tempImagePath.c_str(), newFilePath.c_str()))
+    {
+        MessageBox(g_hwnd, L"Failed to rename file", L"Error", MB_ICONERROR);
+		return false;
+    }
+
+    imageData->imagePath_ = newFilePath;
+    return true;
+}
+bool GetClipboardImage3(ClipImageData* imageData)
 {
     if (!OpenClipboard(g_hwnd))
         return false;
@@ -43,17 +178,17 @@ bool GetClipboardImage2(ClipImageData* imageData)
     if (IsClipboardFormatAvailable(CF_BITMAP))
     {
         imageData->format_ = CF_BITMAP;
-        return true;
+        return GetClipboardImage4(imageData);
     }
     if (IsClipboardFormatAvailable(CF_DIB))
     {
         imageData->format_ = CF_DIB;
-        return true;
+        return GetClipboardImage4(imageData);
     }
     if (IsClipboardFormatAvailable(CF_DIBV5))
     {
         imageData->format_ = CF_DIBV5;
-        return true;
+        return GetClipboardImage4(imageData);
     }
 
     if (IsClipboardFormatAvailable(CF_HDROP))
@@ -88,6 +223,13 @@ bool GetClipboardImage2(ClipImageData* imageData)
     }
     return false;
 }
+bool GetClipboardImage2(ClipImageData* imageData)
+{
+    if (!GetClipboardImage3(imageData))
+        return false;
+
+    return true;
+}
 bool GetClipboardImage(ClipImageData* imageData)
 {
     if (!GetClipboardImage2(imageData))
@@ -96,7 +238,7 @@ bool GetClipboardImage(ClipImageData* imageData)
     static ClipImageData lastImageData;
 
     if(imageData->format_==0)
-		return false;
+        return false;
     
     DWORD currentTick = GetTickCount();
     if (imageData->format_ == lastImageData.format_ &&
@@ -107,7 +249,7 @@ bool GetClipboardImage(ClipImageData* imageData)
     }
     lastImageData = *imageData;
     lastImageData.lastTick_ = currentTick;
-	return true;
+    return true;
 }
 
 
@@ -120,26 +262,28 @@ void NotifyImageCopied()
     Shell_NotifyIconW(NIM_MODIFY, &g_nid);
 }
 
+std::wstring getViewer()
+{
+    if (false)
+    {
+        std::wstring iivViewPath = stdGetParentDirectory(
+            stdGetParentDirectory(stdGetModuleFileName()),
+            L"iiv_view.exe");
+        return iivViewPath;
+    }
+    // return L"C:/local/ImageGlass/ImageGlass.exe";
+    return L"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+}
 void OpenViewer(const wchar_t* imagePath = nullptr)
 {
-    wchar_t exePath[MAX_PATH]{};
-    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
-
-    std::wstring path(exePath);
-    auto pos = path.find_last_of(L"\\/");
-    if (pos == std::wstring::npos)
-        return;
-
-    path.resize(pos + 1);
-    path += L"iiv_view.exe";
-
-	std::wstring arg = stdFormat(L"%s", 
+    std::wstring exe = getViewer();
+    std::wstring arg = stdFormat(L"%s", 
         imagePath ? stdAddDQIfNecessary(imagePath).c_str() : L"");
 
     SHELLEXECUTEINFOW sei{ sizeof(sei) };
     sei.fMask = SEE_MASK_NOASYNC;
-    sei.lpFile = path.c_str();
-	sei.lpParameters = arg.c_str();
+    sei.lpFile = exe.c_str();
+    sei.lpParameters = arg.c_str();
     sei.nShow = SW_SHOWNORMAL;
     
     ShellExecuteExW(&sei);
@@ -155,7 +299,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     case WM_CLIPBOARDUPDATE:
     {
-		ClipImageData clipImageData;
+        ClipImageData clipImageData;
         if (GetClipboardImage(&clipImageData))
         {
             NotifyImageCopied();
