@@ -2,8 +2,10 @@
 
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "Shlwapi.lib")
 
 using namespace Ambiesoft;
+using namespace Ambiesoft::stdosd;
 
 constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_CLIPBOARD = WM_APP + 2;
@@ -131,10 +133,13 @@ void OpenViewer(const wchar_t* imagePath = nullptr)
     path.resize(pos + 1);
     path += L"iiv_view.exe";
 
+	std::wstring arg = stdFormat(L"%s", 
+        imagePath ? stdAddDQIfNecessary(imagePath).c_str() : L"");
+
     SHELLEXECUTEINFOW sei{ sizeof(sei) };
     sei.fMask = SEE_MASK_NOASYNC;
     sei.lpFile = path.c_str();
-	sei.lpParameters = imagePath;
+	sei.lpParameters = arg.c_str();
     sei.nShow = SW_SHOWNORMAL;
     
     ShellExecuteExW(&sei);

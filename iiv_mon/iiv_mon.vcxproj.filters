@@ -11,6 +11,12 @@
     <ClCompile Include="..\..\lsMisc\GetLastErrorString.cpp">
       <Filter>lsMisc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\lsMisc\stdosd\stdosd.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\lsMisc\stdosd\stdosd_win.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\lsMisc\AnyCloser.h">
@@ -26,6 +32,15 @@
       <Filter>lsMisc</Filter>
     </ClInclude>
     <ClInclude Include="iiv_mon.h" />
+    <ClInclude Include="..\..\lsMisc\stdosd\stdosd.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\stdosd\stdosd_exception.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\stdosd\stdosd_literal.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lsMisc">

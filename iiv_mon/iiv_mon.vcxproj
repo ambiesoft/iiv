@@ -76,6 +76,8 @@
     <ClCompile Include="..\..\lsMisc\DebugMacro.cpp" />
     <ClCompile Include="..\..\lsMisc\GetAllClipboardFormats.cpp" />
     <ClCompile Include="..\..\lsMisc\GetLastErrorString.cpp" />
+    <ClCompile Include="..\..\lsMisc\stdosd\stdosd.cpp" />
+    <ClCompile Include="..\..\lsMisc\stdosd\stdosd_win.cpp" />
     <ClCompile Include="iiv_mon.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -83,6 +85,9 @@
     <ClInclude Include="..\..\lsMisc\DebugMacro.h" />
     <ClInclude Include="..\..\lsMisc\GetAllClipboardFormats.h" />
     <ClInclude Include="..\..\lsMisc\GetLastErrorString.h" />
+    <ClInclude Include="..\..\lsMisc\stdosd\stdosd.h" />
+    <ClInclude Include="..\..\lsMisc\stdosd\stdosd_exception.h" />
+    <ClInclude Include="..\..\lsMisc\stdosd\stdosd_literal.h" />
     <ClInclude Include="iiv_mon.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
