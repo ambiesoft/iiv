@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ForceDesignerDpiUnaware>true</ForceDesignerDpiUnaware>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Ambiesoft.Profile">
+      <HintPath>C:\Linkout\DNAssembly.NET4.6.2\Ambiesoft.Profile.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y &quot;$(OutDir)*&quot; &quot;$(SolutionDir)$(Configuration)\&quot;" />
+  </Target>
+
+</Project>

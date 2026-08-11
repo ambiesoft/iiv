@@ -1,12 +1,10 @@
 #include "iiv_mon.h"
+#include "Settngs.h"
 
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "advapi32.lib")
-
-#include <wincrypt.h>
-#include <vector>
 
 using namespace Ambiesoft;
 using namespace Ambiesoft::stdosd;
@@ -264,21 +262,25 @@ void NotifyImageCopied()
 
 std::wstring getViewer()
 {
-    if (false)
+    std::wstring viewerPath = getSettings().getViewer();
+    if (viewerPath.empty())
     {
-        std::wstring iivViewPath = stdGetParentDirectory(
+        std::wstring iivViewPath = stdCombinePath(
             stdGetParentDirectory(stdGetModuleFileName()),
             L"iiv_view.exe");
         return iivViewPath;
     }
     // return L"C:/local/ImageGlass/ImageGlass.exe";
-    return L"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    // return L"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+	return viewerPath;
 }
 void OpenViewer(const wchar_t* imagePath = nullptr)
 {
     std::wstring exe = getViewer();
     std::wstring arg = stdFormat(L"%s", 
         imagePath ? stdAddDQIfNecessary(imagePath).c_str() : L"");
+
+	// MessageBox(nullptr, stdFormat(L"exe: %s\narg: %s", exe.c_str(), arg.c_str()).c_str(), L"Debug", MB_OK);
 
     SHELLEXECUTEINFOW sei{ sizeof(sei) };
     sei.fMask = SEE_MASK_NOASYNC;
@@ -340,6 +342,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
+    if (!getSettings().loadSettings())
+    {
+        MessageBox(nullptr, L"Failed to load settings", L"Error", MB_ICONERROR);
+		return 1;
+    }
+
     const wchar_t CLASS_NAME[] = L"iiv_mon_window";
 
     WNDCLASSW wc{};

@@ -2,9 +2,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00C04FC2B3F}") = "iiv_mon", "iiv_mon\iiv_mon.vcxproj", "{6E2E5D89-2A7B-4A53-9B90-1B9C3D3E0A01}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iiv_mon", "iiv_mon\iiv_mon.vcxproj", "{6E2E5D89-2A7B-4A53-9B90-1B9C3D3E0A01}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "iiv_view", "iiv_view\iiv_view.csproj", "{B3A8BDB1-4D4B-4B48-A7B4-6B3D1B1B0A02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "iiv_setting", "iiv_setting\iiv_setting.csproj", "{488BA49E-1802-44F7-9F4A-18F08EE58E67}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,8 +22,15 @@ Global
 		{B3A8BDB1-4D4B-4B48-A7B4-6B3D1B1B0A02}.Debug|x64.Build.0 = Debug|Any CPU
 		{B3A8BDB1-4D4B-4B48-A7B4-6B3D1B1B0A02}.Release|x64.ActiveCfg = Release|Any CPU
 		{B3A8BDB1-4D4B-4B48-A7B4-6B3D1B1B0A02}.Release|x64.Build.0 = Release|Any CPU
+		{488BA49E-1802-44F7-9F4A-18F08EE58E67}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{488BA49E-1802-44F7-9F4A-18F08EE58E67}.Debug|x64.Build.0 = Debug|Any CPU
+		{488BA49E-1802-44F7-9F4A-18F08EE58E67}.Release|x64.ActiveCfg = Release|Any CPU
+		{488BA49E-1802-44F7-9F4A-18F08EE58E67}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {77B47ECB-EACA-4087-B0F5-954771C3A8FC}
 	EndGlobalSection
 EndGlobal

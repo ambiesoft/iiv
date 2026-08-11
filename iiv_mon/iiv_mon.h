@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <Shlwapi.h>
+#include <wincrypt.h>
 
 #include <string>
 #include <vector>

@@ -23,6 +23,13 @@
     <ClCompile Include="..\..\lsMisc\GetUnexistingFile.cpp">
       <Filter>lsMisc</Filter>
     </ClCompile>
+    <ClCompile Include="Settngs.cpp" />
+    <ClCompile Include="..\..\lsMisc\UrlEncode.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\lsMisc\UTF16toUTF8.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\lsMisc\AnyCloser.h">
@@ -51,6 +58,16 @@
       <Filter>lsMisc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\lsMisc\GetUnexistingFile.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="Settngs.h" />
+    <ClInclude Include="..\..\profile\cpp\Profile\include\ambiesoft.profile.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\UrlEncode.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\UTF16toUTF8.h">
       <Filter>lsMisc</Filter>
     </ClInclude>
   </ItemGroup>

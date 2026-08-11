@@ -80,6 +80,9 @@
     <ClCompile Include="..\..\lsMisc\SaveClipboardImageToFile.cpp" />
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd.cpp" />
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd_win.cpp" />
+    <ClCompile Include="..\..\lsMisc\UrlEncode.cpp" />
+    <ClCompile Include="..\..\lsMisc\UTF16toUTF8.cpp" />
+    <ClCompile Include="Settngs.cpp" />
     <ClCompile Include="iiv_mon.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -92,6 +95,10 @@
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd_exception.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd_literal.h" />
+    <ClInclude Include="..\..\lsMisc\UrlEncode.h" />
+    <ClInclude Include="..\..\lsMisc\UTF16toUTF8.h" />
+    <ClInclude Include="..\..\profile\cpp\Profile\include\ambiesoft.profile.h" />
+    <ClInclude Include="Settngs.h" />
     <ClInclude Include="iiv_mon.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
