@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "iiv_setting": {
+      "commandName": "Project",
+      "commandLineArgs": "--return-cmd %22C%3A%5Clocal%5Cmsys2%5Chome%5CvJ3jfMvss%5Cgitdev%5Ciiv%5CDebug%5Ciiv_mon.exe%22+"
+    }
+  }
+}

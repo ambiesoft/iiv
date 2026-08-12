@@ -13,6 +13,7 @@ constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_CLIPBOARD = WM_APP + 2;
 constexpr UINT ID_TRAY_OPEN = 1001;
 constexpr UINT ID_TRAY_EXIT = 1002;
+constexpr UINT ID_TRAY_SETTINGS = 1003;
 constexpr UINT ID_TRAY = 2001;
 
 NOTIFYICONDATAW g_nid{};
@@ -27,6 +28,7 @@ void ShowTrayMenu()
     HMENU menu = CreatePopupMenu();
     AppendMenuW(menu, MF_STRING, ID_TRAY_OPEN, L"Open with iiv_view");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, L"&Settings");
     AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
 
     SetForegroundWindow(g_hwnd);
@@ -291,6 +293,24 @@ void OpenViewer(const wchar_t* imagePath = nullptr)
     ShellExecuteExW(&sei);
 }
 
+void OnSettings()
+{
+    std::wstring exe = stdCombinePath(
+        stdGetParentDirectory(stdGetModuleFileName()),
+        L"iiv_setting.exe");
+    std::wstring arg = stdFormat(L"--return-cmd %s", UrlEncodeStd(::GetCommandLine()).c_str());
+
+    SHELLEXECUTEINFOW sei{ sizeof(sei) };
+    sei.fMask = SEE_MASK_NOASYNC;
+    sei.lpFile = exe.c_str();
+	sei.lpParameters = arg.c_str();
+    sei.nShow = SW_SHOWNORMAL;
+    if (ShellExecuteExW(&sei)) 
+    {
+		DestroyWindow(g_hwnd);
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
@@ -324,6 +344,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case ID_TRAY_OPEN:
             OpenViewer();
             return 0;
+		case ID_TRAY_SETTINGS:
+            OnSettings();
+            return 0;
         case ID_TRAY_EXIT:
             DestroyWindow(hwnd);
             return 0;
@@ -342,13 +365,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
+    if (IsDuplicateInstance(IIV_MON_MUTEX_NAME))
+    {
+        MessageBox(nullptr, L"iiv_mon is already running", APP_NAME, MB_ICONERROR);
+		return 1;
+    }
     if (!getSettings().loadSettings())
     {
-        MessageBox(nullptr, L"Failed to load settings", L"Error", MB_ICONERROR);
+        MessageBox(nullptr, L"Failed to load settings", APP_NAME, MB_ICONERROR);
 		return 1;
     }
 
-    const wchar_t CLASS_NAME[] = L"iiv_mon_window";
+  
 
     WNDCLASSW wc{};
     wc.lpfnWndProc = WndProc;

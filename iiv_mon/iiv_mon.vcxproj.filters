@@ -30,6 +30,9 @@
     <ClCompile Include="..\..\lsMisc\UTF16toUTF8.cpp">
       <Filter>lsMisc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\lsMisc\IsDuplicateInstance.cpp">
+      <Filter>lsMisc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\lsMisc\AnyCloser.h">
@@ -68,6 +71,9 @@
       <Filter>lsMisc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\lsMisc\UTF16toUTF8.h">
+      <Filter>lsMisc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\lsMisc\IsDuplicateInstance.h">
       <Filter>lsMisc</Filter>
     </ClInclude>
   </ItemGroup>

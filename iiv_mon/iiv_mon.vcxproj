@@ -77,6 +77,7 @@
     <ClCompile Include="..\..\lsMisc\GetAllClipboardFormats.cpp" />
     <ClCompile Include="..\..\lsMisc\GetLastErrorString.cpp" />
     <ClCompile Include="..\..\lsMisc\GetUnexistingFile.cpp" />
+    <ClCompile Include="..\..\lsMisc\IsDuplicateInstance.cpp" />
     <ClCompile Include="..\..\lsMisc\SaveClipboardImageToFile.cpp" />
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd.cpp" />
     <ClCompile Include="..\..\lsMisc\stdosd\stdosd_win.cpp" />
@@ -91,6 +92,7 @@
     <ClInclude Include="..\..\lsMisc\GetAllClipboardFormats.h" />
     <ClInclude Include="..\..\lsMisc\GetLastErrorString.h" />
     <ClInclude Include="..\..\lsMisc\GetUnexistingFile.h" />
+    <ClInclude Include="..\..\lsMisc\IsDuplicateInstance.h" />
     <ClInclude Include="..\..\lsMisc\SaveClipboardImageToFile.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd.h" />
     <ClInclude Include="..\..\lsMisc\stdosd\stdosd_exception.h" />
