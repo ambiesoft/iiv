@@ -52,7 +52,7 @@ std::wstring getTempImagePath()
     }
     std::wstring tempPath = GetUnexistingFile(
 		tempDir.c_str(),
-        L"iiv", L".bmp");
+        L"iiv-tempimage", L".bmp");
     return tempPath;
 }
 
@@ -150,16 +150,28 @@ bool GetClipboardImage4(ClipImageData* imageData)
         return false;
     }
 
-    long fileSize = stdGetFileSize(tempImagePath.c_str());
+    const long fileSize = stdGetFileSize(tempImagePath.c_str());
 
-    std::wstring newFilename = stdFormat(L"%d-%s%s",
+    const std::wstring newFilenameWithoutExt = stdFormat(L"%d-%s",
         fileSize,
-        md5.c_str(),
-        ext.c_str());
+        md5.c_str());
+
+    // Format of a file is '{size}-{md5}-{number}.bmp'
+    // {number} is continuous number starting from '0'.
+    // ex:3686454-8e361171231c729bf3815895ae7cd39c-0.bmp
+    const std::wstring newFilename = newFilenameWithoutExt + L"-0" + ext;
 
 	// Rename the file to include size and MD5
 	std::wstring newFilePath = stdCombinePath(
         stdGetParentDirectory(tempImagePath), newFilename);
+    if (stdFileExists(newFilePath))
+    {
+        newFilePath = GetUnexistingFile(
+            stdGetParentDirectory(newFilePath).c_str(),
+            (newFilenameWithoutExt + L"-").c_str(), ext.c_str());
+    }
+    DTRACE(L"Image temp file:" + newFilePath);
+
     if (!MoveFile(tempImagePath.c_str(), newFilePath.c_str()))
     {
         MessageBox(g_hwnd, L"Failed to rename file", L"Error", MB_ICONERROR);
