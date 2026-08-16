@@ -1,6 +1,8 @@
 #include "iiv_mon.h"
 #include "Settngs.h"
 
+#include "resource.h"
+
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
@@ -388,12 +390,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 		return 1;
     }
 
-  
-
     WNDCLASSW wc{};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = CLASS_NAME;
+    wc.hIcon = LoadIconW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_ICON_MON));
+    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
 
     RegisterClassW(&wc);
 
@@ -410,7 +414,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     g_nid.uID = ID_TRAY;
     g_nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     g_nid.uCallbackMessage = WM_TRAY;
-    g_nid.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    g_nid.hIcon = g_nid.hIcon = LoadIconW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_ICON_MON));
     wcscpy_s(g_nid.szTip, L"iiv - Clipboard Image Viewer");
 
     Shell_NotifyIconW(NIM_ADD, &g_nid);

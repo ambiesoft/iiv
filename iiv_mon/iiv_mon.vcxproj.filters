@@ -76,10 +76,17 @@
     <ClInclude Include="..\..\lsMisc\IsDuplicateInstance.h">
       <Filter>lsMisc</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lsMisc">
       <UniqueIdentifier>{dd1b0654-9795-448d-9ac8-b7fa5388434e}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="iiv_mon.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="iconMain.ico" />
   </ItemGroup>
 </Project>

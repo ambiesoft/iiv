@@ -1,5 +1,7 @@
 *.user
 .vs/
+*.aps
+
 Debug/
 Release/
 
