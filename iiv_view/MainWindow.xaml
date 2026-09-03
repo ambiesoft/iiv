@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterScreen"
         Background="#202020">
     <Grid ClipToBounds="True">
-        <Image x:Name="ImageView"
+        <Image x:Name="imageView"
                Stretch="Uniform"
                RenderOptions.BitmapScalingMode="HighQuality"
                HorizontalAlignment="Left"

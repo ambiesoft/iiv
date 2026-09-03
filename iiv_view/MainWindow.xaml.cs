@@ -53,7 +53,7 @@ public partial class MainWindow : Window
             source.EndInit();
             source.Freeze();
 
-            ImageView.Source = source;
+            imageView.Source = source;
 
             ResetTransform(source);
         }
@@ -71,25 +71,37 @@ public partial class MainWindow : Window
 
     private void LoadClipboardImage()
     {
-        if (!Clipboard.ContainsImage())
+        BitmapSource? source = null;
+        if (Clipboard.ContainsImage())
         {
-            Close();
-            return;
+            source = Clipboard.GetImage();
         }
-
-        var source = Clipboard.GetImage();
 
         if (source == null)
         {
+            MessageBox.Show(
+                "No image found in the clipboard.",
+                "iiv_view",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
             Close();
             return;
         }
 
-        ImageView.Source = source;
+        imageView.Source = source;
 
         ResetTransform(source);
     }
 
+    // Plan (pseudocode):
+    // 1. If no source: reset scale and transforms to defaults and return.
+    // 2. Ensure layout is up-to-date (UpdateLayout).
+    // 3. Determine available width/height from the image's parent or the window as fallback.
+    // 4. Compute image logical width/height from pixel dimensions and DPI.
+    // 5. Keep existing scaling policy (use _scale); ensure ScaleTransform is applied before computing translation.
+    // 6. Account for the Image control's Margin when centering (subtract margins from available space and add left/top margin back).
+    // 7. Compute centered translate X/Y = round((available - imageSize*scale - margins) / 2.0 + marginStart).
+    // 8. Guard against non-finite results and apply the computed translate values.
     private void ResetTransform(BitmapSource? source = null)
     {
         if (source == null)
@@ -104,10 +116,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Get the size of parent container
+        // Ensure layout measurements are current.
         UpdateLayout();
 
-        var parent = ImageView.Parent as FrameworkElement ?? this;
+        var parent = imageView.Parent as FrameworkElement ?? this;
 
         double availableWidth = parent.ActualWidth;
         double availableHeight = parent.ActualHeight;
@@ -118,30 +130,43 @@ public partial class MainWindow : Window
             availableHeight = this.ActualHeight;
         }
 
-        // Pixel width to WPF logical width
+        // Convert pixel size to WPF logical units using DPI
         double imageLogicalWidth = source.PixelWidth * 96.0 / (source.DpiX > 0 ? source.DpiX : 96.0);
         double imageLogicalHeight = source.PixelHeight * 96.0 / (source.DpiY > 0 ? source.DpiY : 96.0);
 
-        if (imageLogicalWidth <= 0 || imageLogicalHeight <= 0)
-        {
+        // Keep default scale behavior (1.0) unless you want to fit down large images.
+        _scale = 1.0;
+        // Example: to scale down large images to fit the container but never scale up:
+        // var fitScale = Math.Min(availableWidth / imageLogicalWidth, availableHeight / imageLogicalHeight);
+        // _scale = Math.Min(1.0, fitScale);
+        // Ensure a sane scale value
+        if (!double.IsFinite(_scale) || _scale <= 0)
             _scale = 1.0;
-        }
-        else
-        {
-            var fitScale = Math.Min(availableWidth / imageLogicalWidth, availableHeight / imageLogicalHeight);
 
-            // Scale down large images to fit, do not scale up small images (maximum 1.0)
-            _scale = Math.Min(1.0, fitScale);
-            if (_scale <= 0)
-                _scale = 1.0;
-        }
-
+        // Apply scale so any rendered size or layout-affecting properties consider the scale.
         ScaleTransform.ScaleX = _scale;
         ScaleTransform.ScaleY = _scale;
 
-        // Place the image as centrally as possible
-        TranslateTransform.X = Math.Round((availableWidth - imageLogicalWidth * _scale) / 2.0);
-        TranslateTransform.Y = Math.Round((availableHeight - imageLogicalHeight * _scale) / 2.0);
+        // Account for Image control margins when centering.
+        var margin = imageView.Margin;
+        double horizontalMargin = margin.Left + margin.Right;
+        double verticalMargin = margin.Top + margin.Bottom;
+
+        double tx = (availableWidth - imageLogicalWidth * _scale - horizontalMargin) / 2.0 + margin.Left;
+        double ty = (availableHeight - imageLogicalHeight * _scale - verticalMargin) / 2.0 + margin.Top;
+
+        if (!double.IsFinite(tx))
+            tx = 0;
+        if (!double.IsFinite(ty))
+            ty = 0;
+
+        //TranslateTransform.X = Math.Abs(Math.Round(tx));
+        //TranslateTransform.Y = Math.Abs(Math.Round(ty));
+
+        TranslateTransform.X = Math.Abs( 
+            (availableWidth-imageLogicalWidth * _scale) *_scale/2
+            );
+//        TranslateTransform.Y = (availableHeight-imageLogicalHeight)/2;  
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -174,7 +199,7 @@ public partial class MainWindow : Window
 
     private void OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        if (ImageView.Source == null)
+        if (imageView.Source == null)
             return;
 
         var oldScale = _scale;

@@ -1,7 +1,8 @@
 {
   "profiles": {
     "iiv_view": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Desktop\\F2E92UR.jpg\""
     }
   }
 }
