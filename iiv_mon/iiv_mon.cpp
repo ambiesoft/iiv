@@ -132,7 +132,7 @@ std::wstring getTempImagePath()
 //    - `stdCombinePath(tempDir.c_str(), L"*.*")`.
 // 3. Call `FindFirstFileW` with the search pattern.
 //    - If it returns `INVALID_HANDLE_VALUE`, treat as no files / nothing to remove and return true.
-// 4. Use a `do { ... } while (FindNextFileW(...));` loop to enumerate entries.
+// 4. Use `do { ... } while (FindNextFileW(...));` loop to enumerate entries.
 //    - For each `WIN32_FIND_DATAW` entry:
 //      a. If `findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY` is set, `continue` (skip directories).
 //      b. Read the file name from `findData.cFileName` into `std::wstring filename`.
@@ -160,7 +160,7 @@ std::wstring getTempImagePath()
 //         - Ignore delete failures (do not abort enumeration); proceed to next file.
 // 5. After enumeration completes, call `FindClose(hFind)` and return true.
 // 6. Notes and caveats:
-//    - The loop must be structured as `do { ... } while (FindNextFileW(hFind, &findData));`
+//    - The loop must be structured as `do { } while (FindNextFileW(hFind, &findData));`
 //      so that `continue` statements inside the body correctly advance to the next file.
 //    - Do not delete files that do not strictly match the expected pattern to avoid accidental removal.
 //    - Be robust to errors: when encountering malformed entries or IO errors, skip and continue.
@@ -168,29 +168,27 @@ std::wstring getTempImagePath()
 bool RemoveOldTempImageFiles()
 {
     /*
-    実装計画（詳細な擬似コード）:
-    1. `getTempImageDirectory()` で一時ディレクトリを取得する。
-       - 空なら false を返す。
-    2. `stdCombinePath(tempDir.c_str(), L"*.*")` を作成してファイル列挙を開始する。
-       - `FindFirstFileW` が `INVALID_HANDLE_VALUE` を返ったら、対象ファイルが無いものとして true を返す。
-    3. 現在時刻を `GetSystemTimeAsFileTime` で取得し、100ナノ秒単位の値 (`ULARGE_INTEGER::QuadPart`) に変換する。
-    4. 14日間を 100ナノ秒単位に換算した閾値を計算し、`threshold = now - 14days` とする。
-    5. `do { ... } while (FindNextFileW(...));` ループで列挙する。各エントリについて:
-       a. ディレクトリならスキップ。
-       b. ファイル名を `std::wstring filename(findData.cFileName);` として得る。
-       c. ファイルの最終更新時刻 `findData.ftLastWriteTime` を `ULARGE_INTEGER` に変換して
-          `fileTime.QuadPart` を得る。
-       d. `fileTime.QuadPart > threshold` の場合（つまり14日未満のもの）は削除しない（continue）。
-       e. 拡張子が存在するか確認し、拡張子が `.bmp` でないなら continue。
-       f. 拡張子を外した名前が `<size>-<md5>-<number>` の形式か検証する:
-          - 最初と最後の '-' の位置を見つけ、各パートが空でないことを確認する。
-          - `partSize` と `partNum` は数字のみ、`partMd5` は長さ 32 で全て 16 進文字であることを確認する。
-       g. 全ての検証が通り、かつ古い（14日以上前）なら `stdCombinePath(tempDir.c_str(), filename.c_str())` を作り、
-          `DeleteFileW` を呼んで削除する（失敗しても無視して次へ進む）。
-    6. 列挙終了後は `FindClose(hFind)` を呼んで true を返す。
-    注意:
-    - ループは `do { } while (FindNextFileW(...));` の形にして `continue` が正しく次へ進むようにする。
-    - 削除条件は「ファイルの最終更新時刻が現在から14日（= 14*24*60*60秒）より前」であること。
+    Implementation plan (detailed pseudocode):
+    1. Get the temporary directory by calling `getTempImageDirectory()`.
+       - If empty, return false.
+    2. Create a search pattern `stdCombinePath(tempDir.c_str(), L"*.*")` and start file enumeration.
+       - If `FindFirstFileW` returns `INVALID_HANDLE_VALUE`, treat as no target files and return true.
+    3. Get current time via `GetSystemTimeAsFileTime` and convert to 100-nanosecond units (`ULARGE_INTEGER::QuadPart`).
+    4. Compute threshold by subtracting 14 days in 100-nanosecond units: `threshold = now - 14days`.
+    5. Enumerate with `do { ... } while (FindNextFileW(...));`. For each entry:
+       a. Skip directories.
+       b. Obtain filename as `std::wstring filename(findData.cFileName);`.
+       c. Convert the file's last write time `findData.ftLastWriteTime` to `ULARGE_INTEGER` and get `fileTime.QuadPart`.
+       d. If `fileTime.QuadPart > threshold` (i.e., newer than 14 days), skip (continue).
+       e. Verify the extension exists and is `.bmp` (case-insensitive); otherwise continue.
+       f. Verify the name without extension matches `<size>-<md5>-<number>`:
+          - Find first and last '-' positions and ensure parts are non-empty.
+          - `partSize` and `partNum` must be digits only; `partMd5` must be 32 hex characters.
+       g. If all validations pass and the file is older than 14 days, build the full path with `stdCombinePath` and call `DeleteFileW` (ignore failures).
+    6. After enumeration, call `FindClose(hFind)` and return true.
+    Notes:
+    - Use `do { } while (FindNextFileW(...));` so that `continue` advances correctly.
+    - Deletion condition: the file's last write time must be older than 14 days.
     */
 
     std::wstring tempDir = getTempImageDirectory();
@@ -203,7 +201,7 @@ bool RemoveOldTempImageFiles()
     if (hFind == INVALID_HANDLE_VALUE)
         return true;
 
-    // 現在時刻を取得し、14日分を 100ナノ秒単位で引いた閾値を作る
+    // Get current time and compute threshold by subtracting 14 days expressed in 100-nanosecond units
     FILETIME ftNow{};
     GetSystemTimeAsFileTime(&ftNow);
     ULARGE_INTEGER uiNow{};
@@ -215,37 +213,37 @@ bool RemoveOldTempImageFiles()
     if (uiNow.QuadPart > fourteenDays100ns)
         threshold = uiNow.QuadPart - fourteenDays100ns;
     else
-        threshold = 0; // 万が一オーバーフローする場合は 0 を閾値にする
+        threshold = 0; // Use 0 as threshold in case of overflow
 
     do
     {
-        // ディレクトリはスキップ
+        // Skip directories
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             continue;
 
-        // 最終更新時刻の確認: 14日未満は削除しない
+        // Check last write time: skip files newer than 14 days
         ULARGE_INTEGER fileTime{};
         fileTime.LowPart = findData.ftLastWriteTime.dwLowDateTime;
         fileTime.HighPart = findData.ftLastWriteTime.dwHighDateTime;
 
         if (fileTime.QuadPart > threshold)
-            continue; // 14日未満のファイルは削除しない
+            continue; // Do not delete files newer than 14 days
 
         std::wstring filename(findData.cFileName);
 
-        // 拡張子分離
+        // Separate extension
         auto posDot = filename.find_last_of(L'.');
         if (posDot == std::wstring::npos)
             continue;
 
         std::wstring nameNoExt = filename.substr(0, posDot);
-        std::wstring ext = filename.substr(posDot); // '.' を含む
+        std::wstring ext = filename.substr(posDot); // includes '.'
 
-        // .bmp のみ対象（大文字小文字を無視）
+        // Only target .bmp (case-insensitive)
         if (_wcsicmp(ext.c_str(), L".bmp") != 0)
             continue;
 
-        // 形式: <size>-<md5>-<number>
+        // Format: <size>-<md5>-<number>
         size_t firstDash = nameNoExt.find(L'-');
         size_t lastDash = nameNoExt.rfind(L'-');
         if (firstDash == std::wstring::npos || lastDash == std::wstring::npos || firstDash == lastDash)
@@ -258,7 +256,7 @@ bool RemoveOldTempImageFiles()
         if (partSize.empty() || partMd5.empty() || partNum.empty())
             continue;
 
-        // ヘルパー
+        // Helpers
         auto isDigits = [](const std::wstring& s) -> bool {
             for (wchar_t c : s)
             {
@@ -286,24 +284,24 @@ bool RemoveOldTempImageFiles()
         if (!isDigits(partNum))
             continue;
 
-        // 実ファイルパスを作成して MD5 を計算
+        // Build full file path and compute MD5
         std::wstring filePath = stdCombinePath(tempDir.c_str(), filename.c_str());
 
         std::wstring computedMd5;
         if (!ComputeFileMD5(filePath, computedMd5))
         {
-            // MD5 計算失敗は削除しない
+            // If MD5 computation fails, do not delete
             continue;
         }
 
-        // partMd5 と比較（大文字小文字を無視）
+        // Compare with partMd5 (case-insensitive)
         if (_wcsicmp(partMd5.c_str(), computedMd5.c_str()) != 0)
         {
-            // 一致しなければ削除しない
+            // Do not delete if not matched
             continue;
         }
 
-        // すべての検証を通ったので削除
+        // All validations passed, delete file
         DeleteFileW(filePath.c_str());
 
     } while (FindNextFileW(hFind, &findData));
