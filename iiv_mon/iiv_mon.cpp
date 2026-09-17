@@ -1,4 +1,4 @@
-#include "iiv_mon.h"
+﻿#include "iiv_mon.h"
 #include "Settngs.h"
 
 #include "resource.h"
@@ -21,42 +21,6 @@ constexpr UINT ID_TRAY = 2001;
 NOTIFYICONDATAW g_nid{};
 HWND g_hwnd = nullptr;
 DWORD ClipImageData::lastTick_ = 0;
-
-void ShowTrayMenu()
-{
-    POINT pt{};
-    GetCursorPos(&pt);
-
-    HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, ID_TRAY_OPEN, L"Open with iiv_view");
-    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, L"&Settings");
-    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
-
-    SetForegroundWindow(g_hwnd);
-    TrackPopupMenu(menu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, g_hwnd, nullptr);
-    DestroyMenu(menu);
-}
-
-std::wstring getTempImagePath()
-{
-	std::wstring tempDir = stdCombinePath(
-        stdGetParentDirectory(stdGetModuleFileName()).c_str(),
-		L"temp");
-    if (!CreateDirectory(tempDir.c_str(), nullptr))
-    {
-        DWORD err = GetLastError();
-        if (err != ERROR_ALREADY_EXISTS)
-        {
-            MessageBox(g_hwnd, stdFormat(L"Failed to create temp directory: %s", tempDir.c_str()).c_str(), L"Error", MB_ICONERROR);
-            return L"";
-		}
-    }
-    std::wstring tempPath = GetUnexistingFile(
-		tempDir.c_str(),
-        L"iiv-tempimage", L".bmp");
-    return tempPath;
-}
 
 // Compute MD5 of a file using CryptoAPI
 static bool ComputeFileMD5(const std::wstring& filePath, std::wstring& outHex)
@@ -89,8 +53,8 @@ static bool ComputeFileMD5(const std::wstring& filePath, std::wstring& outHex)
                 break;
             }
         }
-        if(bBreak)
-			break;
+        if (bBreak)
+            break;
 
         BYTE rgbHash[16];
         DWORD cbHash = sizeof(rgbHash);
@@ -107,7 +71,7 @@ static bool ComputeFileMD5(const std::wstring& filePath, std::wstring& outHex)
         }
 
         success = true;
-	} while (false);
+    } while (false);
 
     if (hHash)
         CryptDestroyHash(hHash);
@@ -115,6 +79,237 @@ static bool ComputeFileMD5(const std::wstring& filePath, std::wstring& outHex)
         CryptReleaseContext(hProv, 0);
     CloseHandle(hFile);
     return success;
+}
+
+void ShowTrayMenu()
+{
+    POINT pt{};
+    GetCursorPos(&pt);
+
+    HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING, ID_TRAY_OPEN, L"Open with iiv_view");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, L"&Settings");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
+
+    SetForegroundWindow(g_hwnd);
+    TrackPopupMenu(menu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, g_hwnd, nullptr);
+    DestroyMenu(menu);
+}
+
+std::wstring getTempImageDirectory()
+{
+    std::wstring tempDir = stdCombinePath(
+        stdGetParentDirectory(stdGetModuleFileName()).c_str(),
+        L"temp");
+    if (!CreateDirectory(tempDir.c_str(), nullptr))
+    {
+        DWORD err = GetLastError();
+        if (err != ERROR_ALREADY_EXISTS)
+        {
+            MessageBox(g_hwnd, stdFormat(L"Failed to create temp directory: %s", tempDir.c_str()).c_str(), L"Error", MB_ICONERROR);
+            return L"";
+        }
+    }
+	return tempDir;
+}
+std::wstring getTempImagePath()
+{
+	std::wstring tempDir = getTempImageDirectory();
+	if (tempDir.empty())
+		return L"";
+
+    std::wstring tempPath = GetUnexistingFile(
+		tempDir.c_str(),
+        L"iiv-tempimage", L".bmp");
+    return tempPath;
+}
+
+// Implementation plan (detailed pseudocode):
+// 1. Obtain the temporary directory by calling `getTempImageDirectory()`.
+//    - If the returned path is empty, fail and return false.
+// 2. Construct a search pattern to enumerate all files in the directory:
+//    - `stdCombinePath(tempDir.c_str(), L"*.*")`.
+// 3. Call `FindFirstFileW` with the search pattern.
+//    - If it returns `INVALID_HANDLE_VALUE`, treat as no files / nothing to remove and return true.
+// 4. Use a `do { ... } while (FindNextFileW(...));` loop to enumerate entries.
+//    - For each `WIN32_FIND_DATAW` entry:
+//      a. If `findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY` is set, `continue` (skip directories).
+//      b. Read the file name from `findData.cFileName` into `std::wstring filename`.
+//      c. Locate the last dot (`.`) character to split extension:
+//         - If not found, `continue`.
+//         - Let `nameNoExt = filename.substr(0, posDot)` and `ext = filename.substr(posDot)`
+//           (note: `ext` includes the leading dot).
+//      d. Only target files with `.bmp` extension (case-insensitive).
+//         - Use `_wcsicmp(ext.c_str(), L".bmp")` to check.
+//         - If not `.bmp`, `continue`.
+//      e. Expect the file name (without extension) to be in the form: `<size>-<md5>-<number>`.
+//         - Find `firstDash = nameNoExt.find(L'-')` and `lastDash = nameNoExt.rfind(L'-')`.
+//         - If either dash not found or `firstDash == lastDash`, `continue`.
+//         - Extract `partSize = nameNoExt.substr(0, firstDash)`,
+//                   `partMd5 = nameNoExt.substr(firstDash + 1, lastDash - firstDash - 1)`,
+//                   `partNum = nameNoExt.substr(lastDash + 1)`.
+//         - If any part is empty, `continue`.
+//      f. Validate each part:
+//         - `partSize` must contain only digits (use `iswdigit` in a loop).
+//         - `partNum` must contain only digits.
+//         - `partMd5` must be exactly 32 characters and each character must be a hex digit:
+//           (0-9, a-f, A-F). Check length first, then iterate characters.
+//      g. If all validations pass, build the full file path using `stdCombinePath(tempDir.c_str(), filename.c_str())`
+//         and call `DeleteFileW(fullPath.c_str())` to remove it.
+//         - Ignore delete failures (do not abort enumeration); proceed to next file.
+// 5. After enumeration completes, call `FindClose(hFind)` and return true.
+// 6. Notes and caveats:
+//    - The loop must be structured as `do { ... } while (FindNextFileW(hFind, &findData));`
+//      so that `continue` statements inside the body correctly advance to the next file.
+//    - Do not delete files that do not strictly match the expected pattern to avoid accidental removal.
+//    - Be robust to errors: when encountering malformed entries or IO errors, skip and continue.
+
+bool RemoveOldTempImageFiles()
+{
+    /*
+    実装計画（詳細な擬似コード）:
+    1. `getTempImageDirectory()` で一時ディレクトリを取得する。
+       - 空なら false を返す。
+    2. `stdCombinePath(tempDir.c_str(), L"*.*")` を作成してファイル列挙を開始する。
+       - `FindFirstFileW` が `INVALID_HANDLE_VALUE` を返ったら、対象ファイルが無いものとして true を返す。
+    3. 現在時刻を `GetSystemTimeAsFileTime` で取得し、100ナノ秒単位の値 (`ULARGE_INTEGER::QuadPart`) に変換する。
+    4. 14日間を 100ナノ秒単位に換算した閾値を計算し、`threshold = now - 14days` とする。
+    5. `do { ... } while (FindNextFileW(...));` ループで列挙する。各エントリについて:
+       a. ディレクトリならスキップ。
+       b. ファイル名を `std::wstring filename(findData.cFileName);` として得る。
+       c. ファイルの最終更新時刻 `findData.ftLastWriteTime` を `ULARGE_INTEGER` に変換して
+          `fileTime.QuadPart` を得る。
+       d. `fileTime.QuadPart > threshold` の場合（つまり14日未満のもの）は削除しない（continue）。
+       e. 拡張子が存在するか確認し、拡張子が `.bmp` でないなら continue。
+       f. 拡張子を外した名前が `<size>-<md5>-<number>` の形式か検証する:
+          - 最初と最後の '-' の位置を見つけ、各パートが空でないことを確認する。
+          - `partSize` と `partNum` は数字のみ、`partMd5` は長さ 32 で全て 16 進文字であることを確認する。
+       g. 全ての検証が通り、かつ古い（14日以上前）なら `stdCombinePath(tempDir.c_str(), filename.c_str())` を作り、
+          `DeleteFileW` を呼んで削除する（失敗しても無視して次へ進む）。
+    6. 列挙終了後は `FindClose(hFind)` を呼んで true を返す。
+    注意:
+    - ループは `do { } while (FindNextFileW(...));` の形にして `continue` が正しく次へ進むようにする。
+    - 削除条件は「ファイルの最終更新時刻が現在から14日（= 14*24*60*60秒）より前」であること。
+    */
+
+    std::wstring tempDir = getTempImageDirectory();
+    if (tempDir.empty())
+        return false;
+
+    WIN32_FIND_DATAW findData{};
+    std::wstring searchPattern = stdCombinePath(tempDir.c_str(), L"*.*");
+    HANDLE hFind = FindFirstFileW(searchPattern.c_str(), &findData);
+    if (hFind == INVALID_HANDLE_VALUE)
+        return true;
+
+    // 現在時刻を取得し、14日分を 100ナノ秒単位で引いた閾値を作る
+    FILETIME ftNow{};
+    GetSystemTimeAsFileTime(&ftNow);
+    ULARGE_INTEGER uiNow{};
+    uiNow.LowPart = ftNow.dwLowDateTime;
+    uiNow.HighPart = ftNow.dwHighDateTime;
+
+    const ULONGLONG fourteenDays100ns = 14ULL * 24ULL * 60ULL * 60ULL * 10000000ULL;
+    ULONGLONG threshold = 0;
+    if (uiNow.QuadPart > fourteenDays100ns)
+        threshold = uiNow.QuadPart - fourteenDays100ns;
+    else
+        threshold = 0; // 万が一オーバーフローする場合は 0 を閾値にする
+
+    do
+    {
+        // ディレクトリはスキップ
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            continue;
+
+        // 最終更新時刻の確認: 14日未満は削除しない
+        ULARGE_INTEGER fileTime{};
+        fileTime.LowPart = findData.ftLastWriteTime.dwLowDateTime;
+        fileTime.HighPart = findData.ftLastWriteTime.dwHighDateTime;
+
+        if (fileTime.QuadPart > threshold)
+            continue; // 14日未満のファイルは削除しない
+
+        std::wstring filename(findData.cFileName);
+
+        // 拡張子分離
+        auto posDot = filename.find_last_of(L'.');
+        if (posDot == std::wstring::npos)
+            continue;
+
+        std::wstring nameNoExt = filename.substr(0, posDot);
+        std::wstring ext = filename.substr(posDot); // '.' を含む
+
+        // .bmp のみ対象（大文字小文字を無視）
+        if (_wcsicmp(ext.c_str(), L".bmp") != 0)
+            continue;
+
+        // 形式: <size>-<md5>-<number>
+        size_t firstDash = nameNoExt.find(L'-');
+        size_t lastDash = nameNoExt.rfind(L'-');
+        if (firstDash == std::wstring::npos || lastDash == std::wstring::npos || firstDash == lastDash)
+            continue;
+
+        std::wstring partSize = nameNoExt.substr(0, firstDash);
+        std::wstring partMd5 = nameNoExt.substr(firstDash + 1, lastDash - firstDash - 1);
+        std::wstring partNum = nameNoExt.substr(lastDash + 1);
+
+        if (partSize.empty() || partMd5.empty() || partNum.empty())
+            continue;
+
+        // ヘルパー
+        auto isDigits = [](const std::wstring& s) -> bool {
+            for (wchar_t c : s)
+            {
+                if (!iswdigit(c))
+                    return false;
+            }
+            return true;
+        };
+        auto isHex32 = [](const std::wstring& s) -> bool {
+            if (s.length() != 32) return false;
+            for (wchar_t c : s)
+            {
+                if (!(iswdigit(c) ||
+                      (c >= L'a' && c <= L'f') ||
+                      (c >= L'A' && c <= L'F')))
+                    return false;
+            }
+            return true;
+        };
+
+        if (!isDigits(partSize))
+            continue;
+        if (!isHex32(partMd5))
+            continue;
+        if (!isDigits(partNum))
+            continue;
+
+        // 実ファイルパスを作成して MD5 を計算
+        std::wstring filePath = stdCombinePath(tempDir.c_str(), filename.c_str());
+
+        std::wstring computedMd5;
+        if (!ComputeFileMD5(filePath, computedMd5))
+        {
+            // MD5 計算失敗は削除しない
+            continue;
+        }
+
+        // partMd5 と比較（大文字小文字を無視）
+        if (_wcsicmp(partMd5.c_str(), computedMd5.c_str()) != 0)
+        {
+            // 一致しなければ削除しない
+            continue;
+        }
+
+        // すべての検証を通ったので削除
+        DeleteFileW(filePath.c_str());
+
+    } while (FindNextFileW(hFind, &findData));
+
+    FindClose(hFind);
+    return true;
 }
 
 bool GetClipboardImage4(ClipImageData* imageData)
@@ -388,6 +583,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     {
         MessageBox(nullptr, L"Failed to load settings", APP_NAME, MB_ICONERROR);
 		return 1;
+    }
+
+    if (!RemoveOldTempImageFiles())
+    {
+		MessageBox(nullptr, L"Failed to remove old temp image files", APP_NAME, MB_ICONERROR);
     }
 
     WNDCLASSW wc{};
