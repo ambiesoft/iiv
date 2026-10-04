@@ -163,10 +163,12 @@ public partial class MainWindow : Window
         //TranslateTransform.X = Math.Abs(Math.Round(tx));
         //TranslateTransform.Y = Math.Abs(Math.Round(ty));
 
-        TranslateTransform.X = Math.Abs( 
-            (availableWidth-imageLogicalWidth * _scale) *_scale/2
-            );
-//        TranslateTransform.Y = (availableHeight-imageLogicalHeight)/2;  
+        //TranslateTransform.X = Math.Abs(
+        //    (availableWidth - imageLogicalWidth * _scale) * _scale / 2
+        //    );
+        //TranslateTransform.X = (availableWidth - imageLogicalWidth) / 2;
+    
+        //        TranslateTransform.Y = (availableHeight-imageLogicalHeight)/2;  
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

@@ -464,7 +464,7 @@ void NotifyImageCopied()
 {
     g_nid.uFlags = NIF_INFO;
     wcscpy_s(g_nid.szInfoTitle, L"iiv");
-    wcscpy_s(g_nid.szInfo, L"OOOAAA");
+    wcscpy_s(g_nid.szInfo, I18N(L"Detected Clipboard change. Opening viewer..."));
     g_nid.dwInfoFlags = NIIF_INFO;
     Shell_NotifyIconW(NIM_MODIFY, &g_nid);
 }

@@ -23,6 +23,8 @@ struct ClipImageData
     std::wstring imagePath_;
 };
 
+#define I18N(s) s
+
 constexpr const wchar_t APP_NAME[] = L"iiv_mon";
 constexpr const wchar_t IIV_MON_MUTEX_NAME[] = L"iiv_mon_mutex";
 constexpr const wchar_t CLASS_NAME[] = L"iiv_mon_window";
