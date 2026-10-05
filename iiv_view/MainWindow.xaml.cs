@@ -16,7 +16,27 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        Loaded += (_, _) => LoadImage();
+        Loaded += (_, _) =>
+        {
+            LoadImage();
+
+            // Run after layout / rendering so the window can actually be shown,
+            // then briefly set Topmost to bring it to foreground and restore.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    Topmost = true;
+                    Activate();
+                    Topmost = false;
+                }
+                catch
+                {
+                    // ignore any exceptions when trying to activate
+                }
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        };
+        
 
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseLeftButtonUp += OnMouseLeftButtonUp;
