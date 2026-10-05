@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -12,12 +14,27 @@ public partial class MainWindow : Window
     private double _startY;
     private double _scale = 1.0;
 
+    private record WindowSettings
+    {
+        public double Width { get; init; }
+        public double Height { get; init; }
+        public double Left { get; init; }
+        public double Top { get; init; }
+        public bool IsMaximized { get; init; }
+    }
+
+    private static string SettingsFilePath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "iiv_view", "window.json");
+
     public MainWindow()
     {
         InitializeComponent();
 
         Loaded += (_, _) =>
         {
+            // restore window geometry first
+            LoadWindowSizeFromSettings();
+
             LoadImage();
 
             // Run after layout / rendering so the window can actually be shown,
@@ -36,13 +53,92 @@ public partial class MainWindow : Window
                 }
             }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         };
-        
+
+        Closing += (_, _) => SaveWindowSizeToSettings();
 
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseLeftButtonUp += OnMouseLeftButtonUp;
         MouseMove += OnMouseMove;
         MouseWheel += OnMouseWheel;
         KeyDown += OnKeyDown;
+    }
+
+    private void LoadWindowSizeFromSettings()
+    {
+        try
+        {
+            if (!File.Exists(SettingsFilePath))
+                return;
+
+            var json = File.ReadAllText(SettingsFilePath);
+            var settings = JsonSerializer.Deserialize<WindowSettings>(json);
+            if (settings == null)
+                return;
+
+            // Apply as manual startup location so Left/Top are respected.
+            WindowStartupLocation = WindowStartupLocation.Manual;
+
+            // Validate values
+            if (double.IsFinite(settings.Width) && settings.Width > 0 &&
+                double.IsFinite(settings.Height) && settings.Height > 0)
+            {
+                Width = settings.Width;
+                Height = settings.Height;
+            }
+
+            if (double.IsFinite(settings.Left) && double.IsFinite(settings.Top))
+            {
+                Left = settings.Left;
+                Top = settings.Top;
+            }
+
+            // Ensure window is on-screen (simple clamp to work area)
+            var wa = SystemParameters.WorkArea;
+            if (Left + Width < wa.Left || Top + Height < wa.Top || Left > wa.Right || Top > wa.Bottom)
+            {
+                Left = Math.Max(wa.Left, wa.Left + (wa.Width - Width) / 2);
+                Top = Math.Max(wa.Top, wa.Top + (wa.Height - Height) / 2);
+            }
+
+            if (settings.IsMaximized)
+            {
+                // Defer maximizing until after layout if needed - setting here is acceptable.
+                WindowState = WindowState.Maximized;
+            }
+        }
+        catch
+        {
+            // ignore failures to avoid blocking startup
+        }
+    }
+
+    private void SaveWindowSizeToSettings()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(SettingsFilePath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            // Use RestoreBounds to get the unmaximized bounds (so we can restore correct size later).
+            var bounds = this.RestoreBounds;
+
+            var settings = new WindowSettings
+            {
+                IsMaximized = WindowState == WindowState.Maximized,
+                Width = bounds.Width,
+                Height = bounds.Height,
+                Left = bounds.Left,
+                Top = bounds.Top
+            };
+
+            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(SettingsFilePath, json);
+        }
+        catch
+        {
+            // ignore IO errors silently
+        }
     }
 
     private void LoadImage()
