@@ -30,11 +30,11 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // restore window geometry first
+        LoadWindowSizeFromSettings();
+
         Loaded += (_, _) =>
         {
-            // restore window geometry first
-            LoadWindowSizeFromSettings();
-
             LoadImage();
 
             // Run after layout / rendering so the window can actually be shown,
