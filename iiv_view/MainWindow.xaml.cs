@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -56,11 +59,103 @@ public partial class MainWindow : Window
 
         Closing += (_, _) => SaveWindowSizeToSettings();
 
+        // Mouse handlers for drag/zoom
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseLeftButtonUp += OnMouseLeftButtonUp;
         MouseMove += OnMouseMove;
         MouseWheel += OnMouseWheel;
+        MouseRightButtonUp += OnMouseRightButtonUp;
         KeyDown += OnKeyDown;
+
+        // Create a simple context menu for right-click
+        var ctx = new ContextMenu();
+
+        var miClose = new MenuItem { Header = "Close" };
+        miClose.Click += (_, _) => Close();
+
+        var miCloseAll = new MenuItem { Header = "Close All" };
+        miCloseAll.Click += (_, _) => CloseAllWindows();
+
+        ctx.Items.Add(miClose);
+        ctx.Items.Add(new Separator());
+        ctx.Items.Add(miCloseAll);
+
+        // Attach to the main window (so right-click anywhere shows it).
+        ContextMenu = ctx;
+    }
+
+    private void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        // Show the context menu at the mouse position if not shown automatically.
+        // If ContextMenu is attached to the Window, WPF often opens it automatically,
+        // but showing it explicitly is harmless.
+        if (ContextMenu != null)
+        {
+            ContextMenu.PlacementTarget = this;
+            ContextMenu.IsOpen = true;
+        }
+    }
+
+    private void CloseAllWindows()
+    {
+        try
+        {
+            var currentPid = Process.GetCurrentProcess().Id;
+            var procs = Process.GetProcessesByName("iiv_view");
+
+            foreach (var p in procs)
+            {
+                try
+                {
+                    if (p.Id == currentPid)
+                        continue; // close self at the end
+
+                    // Try to politely close the GUI (sends WM_CLOSE to main window)
+                    if (p.CloseMainWindow())
+                    {
+                        // Wait briefly for graceful exit
+                        if (!p.WaitForExit(1000))
+                        {
+                            try { p.Kill(); } catch { /* ignore */ }
+                        }
+                    }
+                    else
+                    {
+                        // No main window or didn't accept close - force terminate
+                        try { p.Kill(); } catch { /* ignore */ }
+                    }
+                }
+                catch
+                {
+                    // ignore per-process failures
+                }
+                finally
+                {
+                    p.Dispose();
+                }
+            }
+
+            // Close other windows in this process (collect first)
+            var others = new List<Window>();
+            foreach (Window w in Application.Current.Windows)
+            {
+                if (w != this)
+                    others.Add(w);
+            }
+
+            foreach (var w in others)
+            {
+                try { w.Close(); } catch { /* ignore */ }
+            }
+
+            // Finally close this window
+            Close();
+        }
+        catch
+        {
+            // ensure we at least close ourselves on unexpected error
+            try { Close(); } catch { /* ignore */ }
+        }
     }
 
     private void LoadWindowSizeFromSettings()
