@@ -356,6 +356,11 @@ public partial class MainWindow : Window
         double tx = (availableWidth - imageLogicalWidth * _scale - horizontalMargin) / 2.0 + margin.Left;
         double ty = (availableHeight - imageLogicalHeight * _scale - verticalMargin) / 2.0 + margin.Top;
 
+        if (tx < 0)
+            tx = 0;
+        if (ty < 0)
+            ty = 0;
+
         if (!double.IsFinite(tx))
             tx = 0;
         if (!double.IsFinite(ty))
