@@ -8,7 +8,7 @@
         Background="#202020">
     <Grid ClipToBounds="True">
         <Image x:Name="imageView"
-               Stretch="Uniform"
+               Stretch="None"
                RenderOptions.BitmapScalingMode="HighQuality"
                HorizontalAlignment="Left"
                VerticalAlignment="Top"

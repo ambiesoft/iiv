@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -35,6 +34,10 @@ public partial class MainWindow : Window
 
         // restore window geometry first
         LoadWindowSizeFromSettings();
+
+        // ensure title shows initial scale
+        Title = "iiv_view";
+        UpdateTitleScale();
 
         Loaded += (_, _) =>
         {
@@ -100,8 +103,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            var currentPid = Process.GetCurrentProcess().Id;
-            var procs = Process.GetProcessesByName("iiv_view");
+            var currentPid = System.Diagnostics.Process.GetCurrentProcess().Id;
+            var procs = System.Diagnostics.Process.GetProcessesByName("iiv_view");
 
             foreach (var p in procs)
             {
@@ -304,15 +307,6 @@ public partial class MainWindow : Window
         ResetTransform(source);
     }
 
-    // Plan (pseudocode):
-    // 1. If no source: reset scale and transforms to defaults and return.
-    // 2. Ensure layout is up-to-date (UpdateLayout).
-    // 3. Determine available width/height from the image's parent or the window as fallback.
-    // 4. Compute image logical width/height from pixel dimensions and DPI.
-    // 5. Keep existing scaling policy (use _scale); ensure ScaleTransform is applied before computing translation.
-    // 6. Account for the Image control's Margin when centering (subtract margins from available space and add left/top margin back).
-    // 7. Compute centered translate X/Y = round((available - imageSize*scale - margins) / 2.0 + marginStart).
-    // 8. Guard against non-finite results and apply the computed translate values.
     private void ResetTransform(BitmapSource? source = null)
     {
         if (source == null)
@@ -324,6 +318,8 @@ public partial class MainWindow : Window
 
             TranslateTransform.X = 0;
             TranslateTransform.Y = 0;
+
+            UpdateTitleScale();
             return;
         }
 
@@ -347,12 +343,6 @@ public partial class MainWindow : Window
 
         // Keep default scale behavior (1.0) unless you want to fit down large images.
         _scale = 1.0;
-        // Example: to scale down large images to fit the container but never scale up:
-        // var fitScale = Math.Min(availableWidth / imageLogicalWidth, availableHeight / imageLogicalHeight);
-        // _scale = Math.Min(1.0, fitScale);
-        // Ensure a sane scale value
-        if (!double.IsFinite(_scale) || _scale <= 0)
-            _scale = 1.0;
 
         // Apply scale so any rendered size or layout-affecting properties consider the scale.
         ScaleTransform.ScaleX = _scale;
@@ -371,15 +361,24 @@ public partial class MainWindow : Window
         if (!double.IsFinite(ty))
             ty = 0;
 
-        //TranslateTransform.X = Math.Abs(Math.Round(tx));
-        //TranslateTransform.Y = Math.Abs(Math.Round(ty));
+        TranslateTransform.X = Math.Round(tx);
+        TranslateTransform.Y = Math.Round(ty);
 
-        //TranslateTransform.X = Math.Abs(
-        //    (availableWidth - imageLogicalWidth * _scale) * _scale / 2
-        //    );
-        //TranslateTransform.X = (availableWidth - imageLogicalWidth) / 2;
-    
-        //        TranslateTransform.Y = (availableHeight-imageLogicalHeight)/2;  
+        UpdateTitleScale();
+    }
+
+    private void UpdateTitleScale()
+    {
+        // show scale as percentage in title, e.g. "iiv_view - 100%"
+        try
+        {
+            var pct = Math.Round(_scale * 100.0);
+            Title = $"iiv_view - {pct}%";
+        }
+        catch
+        {
+            // ignore formatting errors
+        }
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -439,6 +438,8 @@ public partial class MainWindow : Window
 
         ScaleTransform.ScaleX = _scale;
         ScaleTransform.ScaleY = _scale;
+
+        UpdateTitleScale();
     }
 
     private void OnKeyDown(object sender, KeyEventArgs e)
