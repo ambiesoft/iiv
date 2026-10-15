@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace iiv_view;
 
@@ -15,6 +16,7 @@ public partial class MainWindow : Window
     private double _startX;
     private double _startY;
     private double _scale = 1.0;
+    private double _uniformScale = 1.0;
 
     private record WindowSettings
     {
@@ -140,7 +142,7 @@ public partial class MainWindow : Window
 
             // Close other windows in this process (collect first)
             var others = new List<Window>();
-            foreach (Window w in Application.Current.Windows)
+            foreach (Window w in System.Windows.Application.Current.Windows)
             {
                 if (w != this)
                     others.Add(w);
@@ -328,18 +330,24 @@ public partial class MainWindow : Window
 
         var parent = imageView.Parent as FrameworkElement ?? this;
 
-        double availableWidth = parent.ActualWidth;
-        double availableHeight = parent.ActualHeight;
+        double containerWidth = parent.ActualWidth;
+        double containerHeight = parent.ActualHeight;
 
-        if (availableWidth <= 0 || availableHeight <= 0)
+        if (containerWidth <= 0 || containerHeight <= 0)
         {
-            availableWidth = this.ActualWidth;
-            availableHeight = this.ActualHeight;
+            containerWidth = this.ActualWidth;
+            containerHeight = this.ActualHeight;
         }
 
-        // Convert pixel size to WPF logical units using DPI
-        double imageLogicalWidth = source.PixelWidth * 96.0 / (source.DpiX > 0 ? source.DpiX : 96.0);
-        double imageLogicalHeight = source.PixelHeight * 96.0 / (source.DpiY > 0 ? source.DpiY : 96.0);
+        double imgWidth = source.PixelWidth;
+        double imgHeight = source.PixelHeight;
+
+        double scaleX = containerWidth / imgWidth;
+        double scaleY = containerHeight / imgHeight;
+        _uniformScale = Math.Min(scaleX, scaleY);
+
+        double renderedWidth = imgWidth * _uniformScale;
+        double renderedHeight = imgHeight * _uniformScale;
 
         // Keep default scale behavior (1.0) unless you want to fit down large images.
         _scale = 1.0;
@@ -353,8 +361,8 @@ public partial class MainWindow : Window
         double horizontalMargin = margin.Left + margin.Right;
         double verticalMargin = margin.Top + margin.Bottom;
 
-        double tx = (availableWidth - imageLogicalWidth * _scale - horizontalMargin) / 2.0 + margin.Left;
-        double ty = (availableHeight - imageLogicalHeight * _scale - verticalMargin) / 2.0 + margin.Top;
+        double tx = (containerWidth - renderedWidth * _scale - horizontalMargin) / 2.0 + margin.Left;
+        double ty = (containerHeight - renderedHeight * _scale - verticalMargin) / 2.0 + margin.Top;
 
         if (tx < 0)
             tx = 0;
@@ -374,15 +382,34 @@ public partial class MainWindow : Window
 
     private void UpdateTitleScale()
     {
-        // show scale as percentage in title, e.g. "iiv_view - 100%"
         try
         {
-            var pct = Math.Round(_scale * 100.0);
-            Title = $"iiv_view - {pct}%";
+            double percent;
+
+            if (imageView?.Source is BitmapSource src)
+            {
+                // original image logical width (WPF units)
+                double origWidth = src.PixelWidth * 96.0 / (src.DpiX > 0 ? src.DpiX : 96.0);
+
+                // fit scale applied by WPF when Stretch="Uniform"
+                double fitScale = (origWidth > 0 && imageView.ActualWidth > 0)
+                    ? imageView.ActualWidth / origWidth
+                    : 1.0;
+
+                // total scale = fitScale (layout) * _scale (user zoom)
+                double totalScale = fitScale * _scale;
+                percent = totalScale * 100.0;
+            }
+            else
+            {
+                percent = _scale * 100.0;
+            }
+
+            Title = $"iiv_view - {Math.Round(percent)}%";
         }
         catch
         {
-            // ignore formatting errors
+            // ignore
         }
     }
 
