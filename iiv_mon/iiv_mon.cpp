@@ -11,13 +11,6 @@
 using namespace Ambiesoft;
 using namespace Ambiesoft::stdosd;
 
-constexpr UINT WM_TRAY = WM_APP + 1;
-constexpr UINT WM_CLIPBOARD = WM_APP + 2;
-constexpr UINT ID_TRAY_OPEN = 1001;
-constexpr UINT ID_TRAY_EXIT = 1002;
-constexpr UINT ID_TRAY_SETTINGS = 1003;
-constexpr UINT ID_TRAY = 2001;
-
 NOTIFYICONDATAW g_nid{};
 HWND g_hwnd = nullptr;
 DWORD ClipImageData::lastTick_ = 0;
@@ -527,6 +520,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_CLIPBOARDUPDATE:
+    {
+        std::thread([] {
+            Sleep(500);
+			PostMessage(g_hwnd, WM_APP_CLIPBOARDUPDATE, 0, 0);
+            }).detach();
+    }
+    break;
+
+    case WM_APP_CLIPBOARDUPDATE:
     {
         ClipImageData clipImageData;
         if (GetClipboardImage(&clipImageData))
