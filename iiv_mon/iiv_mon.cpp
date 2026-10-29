@@ -13,7 +13,6 @@ using namespace Ambiesoft::stdosd;
 
 NOTIFYICONDATAW g_nid{};
 HWND g_hwnd = nullptr;
-DWORD ClipImageData::lastTick_ = 0;
 
 // Compute MD5 of a file using CryptoAPI
 static bool ComputeFileMD5(const std::wstring& filePath, std::wstring& outHex)
@@ -83,6 +82,8 @@ void ShowTrayMenu()
     AppendMenuW(menu, MF_STRING, ID_TRAY_OPEN, L"Open with iiv_view");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_SETTINGS, L"&Settings");
+    AppendMenuW(menu, MF_STRING, ID_TRAY_ABOUT, L"&About");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, L"Exit");
 
     SetForegroundWindow(g_hwnd);
@@ -440,15 +441,7 @@ bool GetClipboardImage(ClipImageData* imageData)
     if(imageData->format_==0)
         return false;
     
-    DWORD currentTick = GetTickCount();
-    if (imageData->format_ == lastImageData.format_ &&
-        imageData->imagePath_ == lastImageData.imagePath_ &&
-        (currentTick - lastImageData.lastTick_) < 1000)
-    {
-        return false;
-    }
     lastImageData = *imageData;
-    lastImageData.lastTick_ = currentTick;
     return true;
 }
 
@@ -513,6 +506,8 @@ void OnSettings()
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    static bool isClipboardUpdated = false;
+
     switch (msg)
     {
     case WM_CREATE:
@@ -521,9 +516,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     case WM_CLIPBOARDUPDATE:
     {
+        static DWORD lastTick = 0;
+        DWORD currentTick = GetTickCount();
+        if ((currentTick - lastTick) < 500)
+        {
+            return 0;
+        }
+        lastTick = currentTick;
         std::thread([] {
             Sleep(500);
-			PostMessage(g_hwnd, WM_APP_CLIPBOARDUPDATE, 0, 0);
+            PostMessage(g_hwnd, WM_APP_CLIPBOARDUPDATE, 0, 0);
             }).detach();
     }
     break;
@@ -555,6 +557,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             return 0;
 		case ID_TRAY_SETTINGS:
             OnSettings();
+            return 0;
+        case ID_TRAY_ABOUT:
+            // Handle About action here
+			MessageBox(hwnd, 
+                L"iiv - Clipboard Image v" APP_VERSION L"\n" L"Ambiesoft 2026",
+                L"About", 
+                MB_OK | MB_ICONINFORMATION);
             return 0;
         case ID_TRAY_EXIT:
             DestroyWindow(hwnd);

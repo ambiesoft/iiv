@@ -19,12 +19,12 @@
 
 struct ClipImageData
 {
-    static DWORD lastTick_;
     UINT format_ = 0;
     std::wstring imagePath_;
 };
 
 #define I18N(s) s
+#define APP_VERSION L"1.0.1"
 
 constexpr UINT WM_TRAY = WM_APP + 1;
 constexpr UINT WM_CLIPBOARD = WM_APP + 2;
@@ -32,6 +32,7 @@ constexpr UINT WM_APP_CLIPBOARDUPDATE = WM_APP + 3;
 constexpr UINT ID_TRAY_OPEN = 1001;
 constexpr UINT ID_TRAY_EXIT = 1002;
 constexpr UINT ID_TRAY_SETTINGS = 1003;
+constexpr UINT ID_TRAY_ABOUT = 1004;
 constexpr UINT ID_TRAY = 2001;
 
 constexpr const wchar_t APP_NAME[] = L"iiv_mon";
